@@ -106,15 +106,26 @@ func (s *Sandbox) CreateFile(name string, content []byte) (string, error) {
 	return path, nil
 }
 
-// ReadFile reads the content of the specified file within the sandbox
+// ReadFile reads the content of the specified file within the sandbox.
+// This operation is thread-safe and will fail if the sandbox has been closed.
+//
+// Parameters:
+//   - name: the relative path of the file to read within the sandbox
+//
+// Returns:
+//   - []byte: the content of the file if successfully read
+//   - error: an error if the sandbox is closed, or if the file cannot be read
 func (s *Sandbox) ReadFile(name string) ([]byte, error) {
+	// Ensure thread-safe access to the sandbox
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	// Check if the sandbox has been closed
 	if s.closed {
 		return nil, fmt.Errorf("%w", ErrSandboxClosed)
 	}
 
+	// Construct the full file path and read its content
 	path := filepath.Join(s.rootDir, name)
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -123,16 +134,32 @@ func (s *Sandbox) ReadFile(name string) ([]byte, error) {
 	return data, nil
 }
 
-// Remove deletes the specified file or directory within the sandbox
+// Remove removes a file or directory within the sandbox by name.
+// This operation is thread-safe and will fail if the sandbox has been closed.
+//
+// Parameters:
+//   - name: the relative path of the file or directory to remove within the sandbox
+//
+// Returns:
+//   - error: nil on success, or an error if the sandbox is closed or the removal fails
+//
+// Possible errors:
+//   - ErrSandboxClosed: if the sandbox has already been cleaned up
+//   - os.RemoveAll error: wrapped with additional context if the filesystem operation fails
 func (s *Sandbox) Remove(name string) error {
+	// Acquire lock to ensure thread-safe access to sandbox state
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	// Check if sandbox has been closed
 	if s.closed {
 		return fmt.Errorf("%w", ErrSandboxClosed)
 	}
 
+	// Construct the full path by joining sandbox root with the provided name
 	path := filepath.Join(s.rootDir, name)
+	
+	// Remove the file or directory recursively
 	if err := os.RemoveAll(path); err != nil {
 		return fmt.Errorf("failed to remove path in sandbox: %w", err)
 	}
