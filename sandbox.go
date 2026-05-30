@@ -3,7 +3,6 @@ package gotmp
 import (
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -169,6 +168,3 @@ func (s *Sandbox) IsClosed() bool {
 	defer s.mu.Unlock()
 	return s.closed
 }
-
-// Ensure Sandbox implements the io.Closer interface
-var _ io.Closer = (*Sandbox)(nil)
